@@ -7,6 +7,7 @@
     box-shadow: #ccc 2px 2px 3px 4px;
     display: flex;
     flex-direction: column;
+    user-select: none;
 }
 
 .suit{

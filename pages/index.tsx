@@ -30,8 +30,12 @@ export const getStaticProps = async () => {
 
 const Home: NextPage = (props: any) => {
   const [card, setCard] = useState(props.card)
-  console.log(card)
   
+  function getNewCard() {
+    const index = randomIndex()
+    setCard(index)
+  }
+
   useEffect(() => {
   }, [card])
 
@@ -43,8 +47,8 @@ const Home: NextPage = (props: any) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-        {deck[props.card]}
-        <button onClick={() => setCard(randomIndex())}>New Card</button>
+        {deck[card]}
+        <button onClick={getNewCard}>New Card</button>
       </main>
     </div>
   )
