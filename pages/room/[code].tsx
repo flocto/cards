@@ -35,9 +35,7 @@ export default function Room(props: any) {
         <h1>Room code is {code}</h1>
         <h1>Players are:</h1>
         {players.map((player: string) => (
-          <div>
-            {player}
-          </div>
+          <p key={player}>{player}</p>
         ))}
       </main>
     </div>
