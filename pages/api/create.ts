@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import {createRoom, addPlayer} from '../../database/db'
 type Data = {
     code: string,
     name: string | string[],
@@ -16,7 +15,5 @@ function generateCode(): string { //random string of length 4
 
 export default function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     let code = generateCode();
-    createRoom(code, req.body.name);
-    addPlayer(code, req.body.uuid);
-    res.redirect(`/room/${code}`);
+    res.redirect(307,`/room/${code}?name=${req.body.name}`);
 }
