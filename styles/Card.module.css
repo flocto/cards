@@ -4,11 +4,21 @@
     margin: 0.3rem;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-shadow: #ccc 2px 2px 3px 4px;
+    box-shadow: #ccc 0px 2px 3px 4px;
     display: flex;
     flex-direction: column;
     user-select: none;
 }
+
+.cardBack {
+    height: 8rem;
+    width: 5.25rem;
+    margin: 0.5rem;
+    border: 12px solid rgb(68, 68, 68);
+    border-radius: 5px;
+    background-color: rgb(247, 66, 66);
+}
+
 
 .suit{
     margin-bottom: auto;
@@ -31,4 +41,20 @@
     font-family: 'Times New Roman', Times, serif;
     font-weight: 900;
     font-size: 150%;
+}
+
+@keyframes cardFlip{
+    0%{
+        transform: rotateY(0deg);
+    }
+    50%{
+        transform: rotateY(90deg);
+    }
+    100%{
+        transform: rotateY(0deg);
+    }
+}
+
+.flip{
+    animation: cardFlip 1s;
 }
