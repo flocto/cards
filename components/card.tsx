@@ -17,6 +17,7 @@ export const Card = ({ suit, value }: CardProps) => {
     useEffect(() => {}, [isFlipping])
 
     const flipCard = (event: any) => {
+        if(isFlipping) return
         classes.push(styles.flip)
         setIsFlipping(true)
         setTimeout(() => {
@@ -27,7 +28,7 @@ export const Card = ({ suit, value }: CardProps) => {
             }, 500)
         }, 500)
     }
-    console.log(classes)
+
     if (flipped) {
         return (
             <div className={classes.join(" ")} onClick={flipCard}>
