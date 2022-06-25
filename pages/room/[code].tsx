@@ -135,10 +135,7 @@ export async function getServerSideProps(context: any) {
 }
 
 
-export default function Room(props: any) {
-  if(!props.data && props.error) {
-    return <div>{props.errorMsg}</div>
-  }
+export default function Room(props: any) { 
   const [name, setName] = useState(props.name)
   const [uuids, setUuids] = useState(props.uuids)
   const [code, setCode] = useState(props.code)
@@ -168,6 +165,9 @@ export default function Room(props: any) {
     }
   }, [])
 
+  if(!props.data && props.error) {
+    return <div>{props.errorMsg}</div>
+  }
   return (
     <div className={styles.container}>
       <Head>
