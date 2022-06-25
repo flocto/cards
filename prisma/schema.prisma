@@ -10,10 +10,21 @@ datasource db {
   url      = env("DB_URL")
 }
 
-model Rooms {
+model Player {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  uuid      String
+  name      String
+  Room      Room? @relation(fields: [roomId], references: [id])
+  roomId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model Room {
   id        String @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  code      String
+  code      String 
+  players   Player[]
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 }

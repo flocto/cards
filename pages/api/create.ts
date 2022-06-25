@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { PrismaClient } from '@prisma/client'
+const prisma: PrismaClient = new PrismaClient()
 type Data = {
     code: string,
     name: string | string[],
@@ -13,7 +15,15 @@ function generateCode(): string { //random string of length 4
     return code
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     let code = generateCode();
-    res.redirect(307,`/room/${code}?name=${req.body.name}`);
+    await prisma.room.create({
+        data: {
+            code: code,
+            name: req.body.name,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        }
+    })
+    res.redirect(307,`/room/${code}`);
 }
