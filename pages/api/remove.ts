@@ -1,25 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { PrismaClient } from '@prisma/client'
-const prisma: PrismaClient = new PrismaClient()
-type Room = {
-    id: string,
-    name: string,
-    code: string,
-    players: Player[]
-    createdAt: Date,
-    updatedAt: Date,
-}
-type Player = {
-    id: string,
-    uuid: string,
-    name: string, // no names yet
-    Room: Room
-    roomId: string
-    createdAt: Date,
-    updatedAt: Date
-}
+import { prisma } from '../../prisma/init'
+import type { Room, Player } from '../../prisma/init'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    // if (false === true){
+    //     res.status(418).json({
+    //         message: 'I\'m a teapot'
+    //     })
+    //     return
+    // }
     if (req.method !== 'POST') {
         res.status(405).end()
     }
@@ -36,31 +25,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     })
 
-    if (player && room && player.roomId === room.id) {
-        room = await prisma.room.update({
-            where: {
-                id: room.id
-            },
-            data: {
-                players: {
-                    disconnect: [{
-                        id: player.id
-                    }]
-                }
-            }
+    if (!player || !room) {
+        res.status(400).json({
+            error: 'Player or room not found'
         })
-        player = await prisma.player.findFirst({
-            where: {
-                id: player.id
-            }
+        return
+    }
+    if (player.roomId == null) {
+        res.status(400).json({
+            error: 'Player is already disconnected'
         })
-        
-        
-        console.log("removed");
-        res.status(200).end()
+        return
+    }
+    if (player.roomId !== room.id) {
+        res.status(400).json({
+            error: 'Player is not in this room'
+        })
         return
     }
 
-    console.log("Failed to remove")
-    res.status(400).end()
+    await prisma.player.delete({
+        where: {
+            id: player.id
+        }
+    })
+    await prisma.room.update({
+        where: {
+            id: room.id
+        },
+        data: {
+            players: {
+                disconnect: {
+                    id: player.id
+                }
+            },
+            updatedAt: new Date()
+        }
+    })
+    
+
+    console.log("Deleted player and removed player from room")
+    res.status(200).json({
+        message: 'Player disconnected'
+    })
 }

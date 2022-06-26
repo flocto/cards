@@ -1,18 +1,12 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { PrismaClient } from '@prisma/client'
 import type { NextApiRequest, NextApiResponse } from 'next'
-
-type Data = {
-  name: string
-}
-
-const prisma: PrismaClient = new PrismaClient()
-
+import { prisma } from '../../prisma/init'
+import type { Room, Player } from '../../prisma/init'
 
 // prisma testing, will be removed
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse
 ) {
   await prisma.room.create({
     data: {

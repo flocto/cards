@@ -5,40 +5,24 @@ import { v4 as uuidv4 } from 'uuid'
 import { getCookies, setCookies } from 'cookies-next'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '../../prisma/init'
+import type { Room, Player } from '../../prisma/init'
 
-type Room = {
-  id: string,
-  name: string,
-  code: string,
-  players: Player[]
-  createdAt: Date,
-  updatedAt: Date,
-}
-type Player = {
-  id: string,
-  uuid: string,
-  name: string, // no names yet
-  Room?: Room
-  roomId?: string
-  createdAt: Date,
-  updatedAt: Date
-}
 
-const prisma = new PrismaClient();
 export async function getServerSideProps(context: any) {
-  if(context.req.url.startsWith('/_next/data/')) {
-    return {
-      props: {
-        data: null,
-        error: true,
-        errorMsg: "No double render"
-      }
-    }
-  }
+  // this is annoying, idk if it works or not
+  // if(context.req.url.startsWith('/_next/data/')) {
+  //   return {
+  //     props: {
+  //       data: null,
+  //       error: true,
+  //       errorMsg: "No double render"
+  //     }
+  //   }
+  // }
 
   const { code } = context.params
-  let room: Room = await prisma.room.findFirst({
+  let room: Room | null = await prisma.room.findFirst({
     where: {
       code: code
     }
@@ -60,30 +44,22 @@ export async function getServerSideProps(context: any) {
     setCookies("id", uuidv4(), context)
   }
   let uuid = cookies.id
-  let player = await prisma.player.findFirst({
-    where: {
-      uuid: uuid
+  let player = await prisma.player.create({
+    data: {
+      uuid: uuid,
+      name: "",
+      Room: {
+        connect: {
+          id: room.id
+        }
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
   })
-  if (!player) {
-    // create player if not exists
-    player = await prisma.player.create({
-      data: {
-        uuid: uuid,
-        name: "",
-        Room: {
-          connect: {
-            id: room.id
-          }
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    })
-  }
 
   // add player to room
-  if (!player.roomId) {
+  if (!player.roomId || player.roomId !== room.id) {
     await prisma.player.update({
       where: {
         id: player.id
@@ -94,6 +70,7 @@ export async function getServerSideProps(context: any) {
             id: room.id
           }
         },
+        updatedAt: new Date()
       }
     })
     await prisma.room.update({
@@ -105,12 +82,13 @@ export async function getServerSideProps(context: any) {
           connect: {
             id: player.id
           }
-        }
+        },
+        updatedAt: new Date()
       }
     })
   }
 
-  let players: Player[] = room.players;
+  let players: Player[] | undefined = room.players;
   players = await prisma.room.findFirst({
     where: {
       id: room.id
@@ -118,7 +96,10 @@ export async function getServerSideProps(context: any) {
     include: {
       players: true
     }
-  }).then((room: Room) => room.players);
+  }).then((room: any) => room.players);
+  if (!players) {
+    players = []
+  }
   const uuids = players.map(p => p.uuid)
 
   // console.log(code)
@@ -135,7 +116,7 @@ export async function getServerSideProps(context: any) {
 }
 
 
-export default function Room(props: any) { 
+export default function Room(props: any) {
   const [name, setName] = useState(props.name)
   const [uuids, setUuids] = useState(props.uuids)
   const [code, setCode] = useState(props.code)
@@ -147,8 +128,9 @@ export default function Room(props: any) {
   useEffect(() => {
     const handleUnload = async (e: BeforeUnloadEvent) => {
       // clearing player info on unload
-      const uuid = getCookies().id;
       // post to /api/remove with uuid and code
+      const uuid = getCookies().id;
+
       await fetch(`/api/remove`, {
         method: 'POST',
         headers: {
@@ -158,6 +140,8 @@ export default function Room(props: any) {
           uuid: uuid,
           code: code
         })
+      }).then(res => res.json()).then(res => {
+        console.log(res)
       })
     }
     if (typeof window !== 'undefined') {
@@ -165,7 +149,7 @@ export default function Room(props: any) {
     }
   }, [])
 
-  if(!props.data && props.error) {
+  if (!props.data && props.error) {
     return <div>{props.errorMsg}</div>
   }
   return (

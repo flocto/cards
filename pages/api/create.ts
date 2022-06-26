@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { PrismaClient } from '@prisma/client'
-const prisma: PrismaClient = new PrismaClient()
+import { prisma } from '../../prisma/init'
+import type { Room, Player } from '../../prisma/init'
+
 type Data = {
     code: string,
     name: string | string[],
@@ -25,5 +26,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             updatedAt: new Date(),
         }
     })
-    res.redirect(307,`/room/${code}`);
+    res.redirect(307, `/room/${code}`);
 }
