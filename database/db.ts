@@ -1,3 +1,6 @@
+// this entire file is deprecated
+
+
 interface DB {
     [key: string]: {
         name: string,
