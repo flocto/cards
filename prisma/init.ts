@@ -4,6 +4,7 @@ type Room = {
     name: string,
     code: string,
     players?: Player[]
+    playerCount: number // not in use currently
     createdAt: Date,
     updatedAt: Date,
 }

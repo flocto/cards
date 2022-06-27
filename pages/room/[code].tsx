@@ -25,6 +25,9 @@ export async function getServerSideProps(context: any) {
   let room: Room | null = await prisma.room.findFirst({
     where: {
       code: code
+    },
+    include: {
+      players: true
     }
   })
   if (!room) {
@@ -57,36 +60,30 @@ export async function getServerSideProps(context: any) {
       updatedAt: new Date()
     }
   })
+  room = await prisma.room.update({
+    where: {
+      id: room.id
+    },
+    data: {
+      playerCount: room.playerCount + 1
+    }
+  })
 
-  // add player to room
-  if (!player.roomId || player.roomId !== room.id) {
-    await prisma.player.update({
-      where: {
-        id: player.id
-      },
-      data: {
-        Room: {
-          connect: {
-            id: room.id
-          }
-        },
-        updatedAt: new Date()
-      }
-    })
-    await prisma.room.update({
-      where: {
-        id: room.id
-      },
-      data: {
-        players: {
-          connect: {
-            id: player.id
-          }
-        },
-        updatedAt: new Date()
-      }
-    })
-  }
+  // console.log(room);
+  // await prisma.room.update({
+  //   where: {
+  //     id: room.id
+  //   },
+  //   data: {
+  //     players: {
+  //       connect: {
+  //         id: player.id
+  //       }
+  //     },
+  //     updatedAt: new Date()
+  //   }
+  // })
+
 
   let players: Player[] | undefined = room.players;
   players = await prisma.room.findFirst({
@@ -115,7 +112,7 @@ export async function getServerSideProps(context: any) {
   }
 }
 
-
+var hackyDoubleUnload = false; // somehow this works :)
 export default function Room(props: any) {
   const [name, setName] = useState(props.name)
   const [uuids, setUuids] = useState(props.uuids)
@@ -127,6 +124,16 @@ export default function Room(props: any) {
 
   useEffect(() => {
     const handleUnload = async (e: BeforeUnloadEvent) => {
+      if (hackyDoubleUnload) { // sometimes function is called twice
+        return;
+      }
+      hackyDoubleUnload = true;
+
+      // if (uuids.length === 1) {
+      //   e.preventDefault();
+      //   e.returnValue = "Are you sure you want to leave?\nThe room will be deleted.";
+      // }
+
       // clearing player info on unload
       // post to /api/remove with uuid and code
       const uuid = getCookies().id;
@@ -140,11 +147,11 @@ export default function Room(props: any) {
           uuid: uuid,
           code: code
         })
-      }).then(res => res.json()).then(res => {
-        console.log(res)
+      }).then(async res => {
+        console.log(await res.text())
       })
     }
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !props.error) {
       window.addEventListener('beforeunload', handleUnload);
     }
   }, [])
