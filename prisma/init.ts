@@ -1,23 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-type Room = {
-    id: string,
-    name: string,
-    code: string,
-    players?: Player[]
-    playerCount: number // not in use currently
-    createdAt: Date,
-    updatedAt: Date,
-}
-type Player = {
-    id: string,
-    uuid: string,
-    name: string, // no names yet
-    Room?: Room
-    roomId: string | null
-    createdAt: Date,
-    updatedAt: Date
-}
-
 declare global {
     var prisma: PrismaClient
 }
@@ -37,4 +18,3 @@ else {
 }
 
 export { prisma }
-export type { Room, Player }
