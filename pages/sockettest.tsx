@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { io } from 'socket.io-client'
 import type { Socket } from 'socket.io-client'
 let socket: Socket;
-const Home = () => {
+export default function sockettest(props: any) {
   const [input, setInput] = useState('')
 
   useEffect((): any => {
@@ -40,4 +40,3 @@ const Home = () => {
   )
 }
 
-export default Home;

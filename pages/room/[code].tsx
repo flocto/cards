@@ -6,28 +6,16 @@ import { getCookies, setCookies } from 'cookies-next'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { prisma } from '../../prisma/init'
-import type { Room, Player } from '../../prisma/init'
+import type { Room } from '@/types/prisma'
+import { Socket, io } from 'socket.io-client'
+import { stdout } from 'process'
 
 
 export async function getServerSideProps(context: any) {
-  // this is annoying, idk if it works or not
-  // if(context.req.url.startsWith('/_next/data/')) {
-  //   return {
-  //     props: {
-  //       data: null,
-  //       error: true,
-  //       errorMsg: "No double render"
-  //     }
-  //   }
-  // }
-
   const { code } = context.params
   let room: Room | null = await prisma.room.findFirst({
     where: {
       code: code
-    },
-    include: {
-      players: true
     }
   })
   if (!room) {
@@ -39,7 +27,6 @@ export async function getServerSideProps(context: any) {
       }
     }
   }
-
   let name = room.name;
 
   const cookies = getCookies(context)
@@ -47,72 +34,40 @@ export async function getServerSideProps(context: any) {
     setCookies("id", uuidv4(), context)
   }
   let uuid = cookies.id
-  let player = await prisma.player.create({
-    data: {
-      uuid: uuid,
-      name: "",
-      Room: {
-        connect: {
-          id: room.id
-        }
+
+
+  //console.log(room);
+  if (!room.players.includes(uuid)) {
+    room = await prisma.room.update({
+      where: {
+        id: room.id
       },
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  })
-  room = await prisma.room.update({
-    where: {
-      id: room.id
-    },
-    data: {
-      playerCount: room.playerCount + 1
-    }
-  })
-
-  // console.log(room);
-  // await prisma.room.update({
-  //   where: {
-  //     id: room.id
-  //   },
-  //   data: {
-  //     players: {
-  //       connect: {
-  //         id: player.id
-  //       }
-  //     },
-  //     updatedAt: new Date()
-  //   }
-  // })
-
-
-  let players: Player[] | undefined = room.players;
-  players = await prisma.room.findFirst({
-    where: {
-      id: room.id
-    },
-    include: {
-      players: true
-    }
-  }).then((room: any) => room.players);
-  if (!players) {
-    players = []
+      data: {
+        players: {
+          push: uuid
+        },
+        updatedAt: new Date()
+      }
+    })
   }
-  const uuids = players.map(p => p.uuid)
+
+  const uuids: String[] = room.players;
 
   // console.log(code)
   // console.log(name)
-  // console.log(uuids)
+  // console.log(uuids, uuid)
 
   return {
     props: {
       code,
       name,
+      uuid,
       uuids,
     },
   }
 }
 
-var hackyDoubleUnload = false; // somehow this works :)
+let socket: Socket;
 export default function Room(props: any) {
   const [name, setName] = useState(props.name)
   const [uuids, setUuids] = useState(props.uuids)
@@ -120,45 +75,41 @@ export default function Room(props: any) {
   const router = useRouter()
 
   useEffect(() => {
-  }, [uuids]) //none of this does anything yet
-
-  useEffect(() => {
-    const handleUnload = async (e: BeforeUnloadEvent) => {
-      if (hackyDoubleUnload) { // sometimes function is called twice
-        return;
-      }
-      hackyDoubleUnload = true;
-
-      // if (uuids.length === 1) {
-      //   e.preventDefault();
-      //   e.returnValue = "Are you sure you want to leave?\nThe room will be deleted.";
-      // }
-
-      // clearing player info on unload
-      // post to /api/remove with uuid and code
-      const uuid = getCookies().id;
-
-      await fetch(`/api/remove`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          uuid: uuid,
-          code: code
-        })
-      }).then(async res => {
-        console.log(await res.text())
-      })
+    if (props.error) { // no need to connect 
+      return
     }
-    if (typeof window !== 'undefined' && !props.error) {
-      window.addEventListener('beforeunload', handleUnload);
+    socket = io('', { path: '/api/room' })
+
+    socket.on("connect", () => {
+      console.log("SOCKET CONNECTED!", socket.id);
+      socket.emit('join-room', {
+        code: code,
+        uuid: props.uuid,
+      });
+    });
+
+    //update player list
+    socket.on('user-join', data => {
+      console.log("USER JOINED!", data);
+      let index = uuids.indexOf(data)
+      if (index === -1) {
+        setUuids([...uuids, data])
+      }
+    });
+
+    socket.on('user-leave', data => {
+      setUuids(uuids.filter((u: string) => u !== data))
+    });
+
+    if (socket) return () => {
+      socket.disconnect();
     }
   }, [])
 
   if (!props.data && props.error) {
     return <div>{props.errorMsg}</div>
   }
+  //console.log("uuids", uuids)
   return (
     <div className={styles.container}>
       <Head>

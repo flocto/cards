@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../prisma/init'
-import type { Room, Player } from '../../prisma/init'
 
 type Data = {
     code: string,
