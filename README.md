@@ -3,6 +3,8 @@ This is a small site created to play card games of any type (and even with custo
 
 Still a work-in-progress.
 
+# Current Goal
+- Move all DB logic to api rather than on getServerSideProps
 
 # Checklist
 - [x] Seperate client and server
