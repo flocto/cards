@@ -1,61 +1,35 @@
-import type { NextPage } from 'next'
 import Head from 'next/head'
 import styles from '../../styles/Home.module.css'
 import { v4 as uuidv4 } from 'uuid'
 import { getCookies, setCookies } from 'cookies-next'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
-import { prisma } from '../../prisma/init'
-import type { Room } from '@/types/prisma'
+import { useEffect, useState, useRef } from 'react'
 import { Socket, io } from 'socket.io-client'
-import { stdout } from 'process'
+import { prisma } from '../../prisma/init'
 
 
 export async function getServerSideProps(context: any) {
   const { code } = context.params
-  let room: Room | null = await prisma.room.findFirst({
+  const room = await prisma.room.findFirst({
     where: {
       code: code
     }
-  })
+  });
   if (!room) {
     return {
       props: {
-        data: null,
         error: true,
         errorMsg: 'Room not found'
       }
     }
   }
-  let name = room.name;
-
+  const name = room.name;
+  let uuids = room.players;
   const cookies = getCookies(context)
   if (!cookies.id) {
     setCookies("id", uuidv4(), context)
   }
-  let uuid = cookies.id
-
-
-  //console.log(room);
-  if (!room.players.includes(uuid)) {
-    room = await prisma.room.update({
-      where: {
-        id: room.id
-      },
-      data: {
-        players: {
-          push: uuid
-        },
-        updatedAt: new Date()
-      }
-    })
-  }
-
-  const uuids: String[] = room.players;
-
-  // console.log(code)
-  // console.log(name)
-  // console.log(uuids, uuid)
+  const uuid = cookies.id
 
   return {
     props: {
@@ -69,18 +43,17 @@ export async function getServerSideProps(context: any) {
 
 let socket: Socket;
 export default function Room(props: any) {
-  const [name, setName] = useState(props.name)
-  const [uuids, setUuids] = useState(props.uuids)
-  const [code, setCode] = useState(props.code)
-  const router = useRouter()
+  const [name, setName] = useState<string>(props.name)
+  const [uuids, setUuids] = useState<string[]>(props.uuids)
+  const latestUuids = useRef<string[]>(uuids)
+  const [code, setCode] = useState<string>(props.code)
+  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(false)
 
-  useEffect(() => {
-    if (props.error) { // no need to connect 
-      return
-    }
+  function socketSetup() { // socket logic
     socket = io('', { path: '/api/room' })
 
     socket.on("connect", () => {
+      setIsSocketConnected(true)
       console.log("SOCKET CONNECTED!", socket.id);
       socket.emit('join-room', {
         code: code,
@@ -88,39 +61,67 @@ export default function Room(props: any) {
       });
     });
 
-    //update player list
-    socket.on('user-join', data => {
+    socket.on('user-join', (data: string) => {
       console.log("USER JOINED!", data);
-      let index = uuids.indexOf(data)
+      let temp = [...latestUuids.current];
+      console.log("current uuids:", temp);
+      let index = temp.indexOf(data)
       if (index === -1) {
-        setUuids([...uuids, data])
+        temp.push(data)
       }
+      setUuids(uuids => {
+        latestUuids.current = temp;
+        return [...temp];
+      });
+      console.log(index, latestUuids.current);
     });
 
-    socket.on('user-leave', data => {
-      setUuids(uuids.filter((u: string) => u !== data))
+    socket.on('user-leave', (data: string) => {
+      console.log("USER LEFT!", data);
+      console.log("still uuids:", [...uuids].filter((u: string) => u !== data));
+      setUuids(uuids => {
+        let temp = [...uuids].filter((u: string) => u !== data);
+        latestUuids.current = temp
+        return temp
+      })
+      console.log(uuids);
     });
+  }
 
+  useEffect(() => { 
+    if (props.error) { // no need to connect 
+      return
+    }
+
+    socketSetup();
     if (socket) return () => {
       socket.disconnect();
     }
   }, [])
 
-  if (!props.data && props.error) {
+  useEffect(() => {
+    console.log("ineffect1", uuids);
+  }, [uuids])
+
+  if (!props.data && props.error) { // unused
     return <div>{props.errorMsg}</div>
   }
+  if (!isSocketConnected) {
+    return <div>Loading...</div>
+  }
   //console.log("uuids", uuids)
+  let players = latestUuids.current;
   return (
     <div className={styles.container}>
       <Head>
         <title>Room: {name}</title>
-        <meta name="description" content="Room" />
+        <meta name="description" content="Card game room" />
       </Head>
       <main className={styles.main}>
         <h1>Room is called {name}</h1>
         <h1>Room code is {code}</h1>
         <h1>Players are:</h1>
-        {uuids.map((player: string) => (
+        {players.map((player: string) => (
           <p key={player}>{player}</p>
         ))}
       </main>

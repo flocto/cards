@@ -23,21 +23,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseS
         });
         io.on("connect", (socket) => {
             console.log("New client connected");
-            socket.on("join-room", (msg) => {
-                io.to(msg.code).emit("user-join", msg.uuid);
+            socket.on("join-room", async msg => {
                 socket.join(msg.code);
+                io.to(msg.code).emit("user-join", msg.uuid);
                 clientIdMap[socket.id] = msg.uuid;
+                await handleJoin(msg.uuid, msg.code);
             });
             socket.on("disconnecting", () => {
                 console.log('Client disconnecting, will remove');
-                //make sure other users are notified of disconnection
                 socket.rooms.forEach(async room => {
                     if (room === socket.id) {
                         return;
                     }
                     io.to(room).emit("user-leave", clientIdMap[socket.id]);
                     console.log('User left room', clientIdMap[socket.id], room);
-                    //remove user from room in DB
                     await handleRemove(clientIdMap[socket.id], room);
                 });
                 delete clientIdMap[socket.id];
@@ -54,6 +53,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseS
     }
     res.end();
 };
+async function handleJoin(uuid: string, code: string) {
+    let room = await prisma.room.findFirst({
+        where: {
+            code: code
+        }
+    });
+    if (!room) {
+        console.log('Room not found');
+        return;
+    }
+
+    room = await prisma.room.update({
+        where: {
+            id: room.id
+        },
+        data: {
+            players: {
+                push: uuid
+            },
+            updatedAt: new Date()
+        }
+    });
+}
+
+
 async function handleRemove(uuid: string, code: string) {
     let room = await prisma.room.findFirst({
         where: {
@@ -84,9 +108,32 @@ async function handleRemove(uuid: string, code: string) {
             updatedAt: new Date()
         }
     });
-    console.log("removefunction", players);
     console.log('Room updated, player removed');
     if (players.length === 0) {
-        console.log("Room is empty");
+        console.log("Room is empty, queueing for deletion");
+        await queueForDeletion(room.id);
     }
+}
+
+async function queueForDeletion(id: string) {
+    //if room is still empty after 10 seconds, delete it
+    setTimeout(async () => {
+        let room = await prisma.room.findFirst({
+            where: {
+                id: id
+            }
+        });
+        if (!room) {
+            console.log("Room does not exist, cannot delete");
+            return;
+        }
+        if (room.players.length === 0) {
+            console.log("Room is still empty, deleting");
+            await prisma.room.delete({
+                where: {
+                    id: id
+                }
+            });
+        }
+    }, 10000);
 }
