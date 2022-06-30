@@ -54,7 +54,7 @@ export default function Room(props: any) {
 
     socket.on("connect", () => {
       setIsSocketConnected(true)
-      console.log("SOCKET CONNECTED!", socket.id);
+      // console.log("SOCKET CONNECTED!", socket.id);
       socket.emit('join-room', {
         code: code,
         uuid: props.uuid,
@@ -62,9 +62,8 @@ export default function Room(props: any) {
     });
 
     socket.on('user-join', (data: string) => {
-      console.log("USER JOINED!", data);
+      // console.log("USER JOINED!", data);
       let temp = [...latestUuids.current];
-      console.log("current uuids:", temp);
       let index = temp.indexOf(data)
       if (index === -1) {
         temp.push(data)
@@ -73,12 +72,10 @@ export default function Room(props: any) {
         latestUuids.current = temp;
         return [...temp];
       });
-      console.log(index, latestUuids.current);
     });
 
     socket.on('user-leave', (data: string) => {
-      console.log("USER LEFT!", data);
-      console.log("still uuids:", [...uuids].filter((u: string) => u !== data));
+      // console.log("USER LEFT!", data);
       setUuids(uuids => {
         let temp = [...uuids].filter((u: string) => u !== data);
         latestUuids.current = temp
@@ -98,10 +95,6 @@ export default function Room(props: any) {
       socket.disconnect();
     }
   }, [])
-
-  useEffect(() => {
-    console.log("ineffect1", uuids);
-  }, [uuids])
 
   if (!props.data && props.error) { // unused
     return <div>{props.errorMsg}</div>
