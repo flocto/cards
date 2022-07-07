@@ -4,10 +4,7 @@ This is a small site created to play card games of any type (and even with custo
 Still a work-in-progress.
 
 # Current Goal
-Move deployment from Vercel as they do not support socket.io :/
-
-NextJS APIs are treated as serverless functions, currently
-looking to move to Heroku. 
+Implement decks, hands, shuffling, dealing, and playing for client side.
 
 # Checklist
 - [x] Seperate client and server
