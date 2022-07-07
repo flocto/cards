@@ -4,6 +4,7 @@ import Router from "next/router";
 import Head from 'next/head'
 import styles from '../styles/Home.module.css'
 import { Card } from '../components/card'
+import { Deck } from '../components/deck'
 
 const suits: string[] = ['S', 'H', 'D', 'C']
 const values: string[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
@@ -47,8 +48,9 @@ const Home: NextPage = (props: any) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-        {deck[card]}
-        <button onClick={getNewCard}>New Card</button>
+        {/* {deck[card]}
+        <button onClick={getNewCard}>New Card</button> */}
+        <Deck shuffled={true} bigJoker={true} smallJoker={true}></Deck>
       </main>
     </div>
   )
